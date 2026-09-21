@@ -1,0 +1,42 @@
+name: Deploy to Render
+
+on:
+  push:
+    tags:
+      - '*'
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v5
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        
+      - name: Run tests
+        run: pytest
+
+  deploy:
+    name: Deploy to Render
+    needs: test
+    if: (github.event_name == 'pull_request' && github.event.pull_request.merged == true) || github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Trigger Render Deploy Hook
+        env:
+          deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl -s "$deploy_url"
